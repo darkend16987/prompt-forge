@@ -35,6 +35,7 @@ export default function ForgePage() {
   const [loading, setLoading]   = useState(false)
   const [targets, setTargets]   = useState<string[]>(['Claude', 'Gemini'])
   const [bilingual, setBilingual] = useState(false)
+  const [outputMode, setOutputMode] = useState<'full' | 'compact'>('full')
 
   // ── History ──────────────────────────────────────────────
   const [history, setHistory] = useState<HistoryItem[]>([])
@@ -68,12 +69,12 @@ export default function ForgePage() {
     setPromptEN('')
 
     try {
-      const metaPrompt = buildMetaPrompt(task, form, targets, bilingual)
+      const metaPrompt = buildMetaPrompt(task, form, targets, bilingual, outputMode)
 
       if (!engine.apiKey) {
         // Fallback — no API key
         await new Promise(r => setTimeout(r, 700))
-        const result = generateFallbackXML(task, form, targets, bilingual)
+        const result = generateFallbackXML(task, form, targets, bilingual, outputMode)
         const parts = result.split(/---\s*EN\s*---/i)
         const pVI = parts[0].trim()
         const pEN = parts[1]?.trim() || ''
@@ -180,8 +181,10 @@ export default function ForgePage() {
               loading={loading}
               targets={targets}
               bilingual={bilingual}
+              outputMode={outputMode}
               onTargetsChange={setTargets}
               onBilingualChange={setBilingual}
+              onOutputModeChange={setOutputMode}
               onCompile={handleCompile}
             />
           </div>

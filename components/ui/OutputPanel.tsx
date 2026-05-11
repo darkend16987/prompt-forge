@@ -10,15 +10,17 @@ interface OutputPanelProps {
   loading: boolean
   targets: string[]
   bilingual: boolean
+  outputMode: 'full' | 'compact'
   onTargetsChange: (t: string[]) => void
   onBilingualChange: (v: boolean) => void
+  onOutputModeChange: (v: 'full' | 'compact') => void
   onCompile: () => void
 }
 
 export default function OutputPanel({
   promptVI, promptEN, loading,
-  targets, bilingual,
-  onTargetsChange, onBilingualChange, onCompile,
+  targets, bilingual, outputMode,
+  onTargetsChange, onBilingualChange, onOutputModeChange, onCompile,
 }: OutputPanelProps) {
   const [activeTab, setActiveTab] = useState<'vi' | 'en' | 'diff'>('vi')
   const [copied, setCopied] = useState(false)
@@ -153,8 +155,9 @@ export default function OutputPanel({
           ))}
         </div>
 
-        {/* Bilingual toggle */}
+        {/* Output mode + Bilingual */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <Toggle value={outputMode === 'compact'} onChange={v => onOutputModeChange(v ? 'compact' : 'full')} label="COMPACT MODE" />
           <Toggle value={bilingual} onChange={onBilingualChange} label="SONG NGỮ VI + EN" />
         </div>
 

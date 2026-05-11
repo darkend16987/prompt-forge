@@ -1,7 +1,16 @@
 import {
   TaskType, CodingForm, ContentForm, AnalyticsForm, SynthesisForm,
-  EngineConfig,
+  EngineConfig, OutputMode,
 } from './types'
+
+/* ── helpers ─────────────────────────────────────────────── */
+function has(val: string | undefined) {
+  return !!(val && val.trim())
+}
+
+function quote(val: string) {
+  return val.trim() || 'chưa xác định'
+}
 
 // ── Meta-prompt builder (sent to AI to generate the structured prompt) ──
 export function buildMetaPrompt(
@@ -9,6 +18,7 @@ export function buildMetaPrompt(
   form: any,
   targets: string[],
   bilingual: boolean,
+  mode: OutputMode = 'full',
 ): string {
   const targetStr = targets.join(', ') || 'Claude, Gemini'
   const biNote = bilingual
@@ -21,36 +31,66 @@ Target AI: ${targetStr}${biNote}\n\n`
 
   if (taskType === 'coding') {
     const f = form as CodingForm
-    const hasSchema = !!f.schema.trim()
-    const hasCode   = !!f.contextCode.trim()
-    const hasError  = !!f.errorLog.trim()
+    const hasSchema = has(f.schema)
+    const hasCode   = has(f.contextCode)
+    const hasError  = has(f.errorLog)
 
-    return `${baseInstruction}Tạo XML prompt cho CODING task:
-- Ngôn ngữ/Framework: ${f.language || 'chưa xác định'}
-- Mục tiêu: ${f.goal || 'chưa xác định'}
-- Mô tả: ${f.description}
-- Dữ liệu đầu vào hiện có: ${f.inputData || 'chưa xác định'}
-- Output mong đợi: ${f.outputFormat || 'chưa xác định'}
-- Constraints: ${f.constraints || 'không có'}
-${hasSchema ? `- Có schema/ref data đính kèm` : ''}
-${hasCode   ? `- Có context code đính kèm` : ''}
-${hasError  ? `- CÓ ERROR LOG — đây là debug/fix task` : ''}
-${f.alreadyTried ? `- Đã thử: ${f.alreadyTried}` : ''}
+    if (mode === 'compact') {
+      return `${baseInstruction}Người dùng điền:
+- Ngôn ngữ / Framework: ${quote(f.language)}
+- Mục tiêu chính: ${quote(f.goal)}
+- Mô tả vấn đề: ${f.description.trim()}
+${has(f.inputData)    ? `- Input data: ${f.inputData}` : ''}
+${has(f.outputFormat) ? `- Output mong đợi: ${f.outputFormat}` : ''}
+${has(f.constraints)  ? `- Constraints: ${f.constraints}` : ''}
+${hasSchema ? '- Có schema / DB structure đính kèm' : ''}
+${hasCode   ? '- Có context code đính kèm' : ''}
+${hasError  ? '- Có error log — task debug/fix' : ''}
+${has(f.alreadyTried) ? `- Đã thử fix: ${f.alreadyTried}` : ''}
 
-Cấu trúc XML:
+Tạo XML prompt CÓ THỰC TẾ, dùng đúng mô tả người dùng cung cấp. KHÔNG bịa, KHÔNG phóng đại role. structure:
 <prompt>
-  <role/>
-  <context/>
-  <task/>
+  <context>${f.description.trim()}</context>
+  <task>${quote(f.goal)}</task>
   <technical_specs>
-    <language/><input_data/><output_format/>
-  </technical_specs>${hasSchema ? '\n  <reference_data><schema/></reference_data>' : ''}${hasError ? '\n  <debug_context><error_log/><already_tried/><ask_ai>Phân tích root cause. Không suggest cách đã thử. Giải thích WHY trước khi fix.</ask_ai></debug_context>' : ''}
-  <constraints/>
+    <language>${quote(f.language)}</language>
+    ${has(f.inputData) ? `<input_data>${f.inputData}</input_data>` : ''}
+    ${has(f.outputFormat) ? `<output_format>${f.outputFormat}</output_format>` : ''}
+  </technical_specs>
+  ${hasSchema ? '<reference_data><schema/></reference_data>' : ''}
+  ${hasError  ? `<debug_context><error_log/><already_tried>${f.alreadyTried || ''}</already_tried><ask_ai>Phân tích root cause. Không suggest cách đã thử. Giải thích WHY trước fix.</ask_ai></debug_context>` : ''}
+  ${has(f.constraints) ? `<constraints>${f.constraints}</constraints>` : ''}
   <thinking>step-by-step trước khi viết code</thinking>
 </prompt>
-${hasSchema ? `\n[SCHEMA]\n${f.schema}` : ''}
-${hasCode   ? `\n[CODE CONTEXT]\n${f.contextCode}` : ''}
-${hasError  ? `\n[ERROR LOG]\n${f.errorLog}` : ''}`
+${hasSchema ? `\n[SCHEMA]\n${f.schema}` : ''}${hasCode   ? `\n[CODE CONTEXT]\n${f.contextCode}` : ''}${hasError  ? `\n[ERROR LOG]\n${f.errorLog}` : ''}`
+    }
+
+    return `${baseInstruction}Người dùng điền:
+- Ngôn ngữ / Framework: ${quote(f.language)}
+- Mục tiêu chính: ${quote(f.goal)}
+- Mô tả vấn đề: ${f.description.trim()}
+- Input data: ${quote(f.inputData)}
+- Output mong đợi: ${quote(f.outputFormat)}
+- Constraints: ${has(f.constraints) ? f.constraints : 'không có'}
+${hasSchema ? '- Có schema / DB structure đính kèm' : ''}
+${hasCode   ? '- Có context code đính kèm' : ''}
+${hasError  ? '- Có error log — task debug/fix' : ''}
+${has(f.alreadyTried) ? `- Đã thử fix: ${f.alreadyTried}` : ''}
+
+Tạo XML prompt CÓ THỰC TẾ, dùng đúng mô tả người dùng cung cấp. KHÔNG bịa role lớn, KHÔNG phóng đại scope. Các tag chứa đúng nội dung user cung cấp — nếu thiếu thì để placeholder "chưa xác định", không tự điền.
+Cấu trúc XML:
+<prompt>
+  <context>${f.description.trim()}</context>
+  <task>${quote(f.goal)}</task>
+  <technical_specs>
+    <language>${quote(f.language)}</language>
+    <input_data>${quote(f.inputData)}</input_data>
+    <output_format>${quote(f.outputFormat)}</output_format>
+  </technical_specs>${hasSchema ? '\n  <reference_data><schema/></reference_data>' : ''}${hasError ? '\n  <debug_context><error_log/><already_tried/><ask_ai>Phân tích root cause. Không suggest cách đã thử. Giải thích WHY trước khi fix.</ask_ai></debug_context>' : ''}
+  ${has(f.constraints) ? `<constraints>${f.constraints}</constraints>` : ''}
+  <thinking>step-by-step trước khi viết code</thinking>
+</prompt>
+${hasSchema ? `\n[SCHEMA]\n${f.schema}` : ''}${hasCode   ? `\n[CODE CONTEXT]\n${f.contextCode}` : ''}${hasError  ? `\n[ERROR LOG]\n${f.errorLog}` : ''}`
   }
 
   if (taskType === 'content') {
@@ -101,18 +141,38 @@ export function generateFallbackXML(
   form: any,
   targets: string[],
   bilingual: boolean,
+  mode: OutputMode = 'full',
 ): string {
   const targetStr = targets.join(', ')
   let vi = ''
 
   if (taskType === 'coding') {
     const f = form as CodingForm
-    vi = `<prompt>
-  <role>Bạn là senior ${f.language || 'developer'} engineer, 10+ năm kinh nghiệm. Viết code production-ready, clean, có comments đầy đủ.</role>
-  <context>
-    ${f.description || 'Xem chi tiết trong task'}
-  </context>
-  <task>${f.goal || 'Hoàn thành yêu cầu theo mô tả'}</task>
+    if (mode === 'compact') {
+      const specItems = [
+        f.language && `    <language>${f.language}</language>`,
+        f.inputData && `    <input_data>${f.inputData}</input_data>`,
+        f.outputFormat && `    <output_format>${f.outputFormat}</output_format>`,
+      ].filter(Boolean).join('\n')
+      vi = `<prompt>
+  <context>${f.description || ''}</context>
+  <task>${f.goal || ''}</task>${specItems ? `
+  <technical_specs>\n${specItems}\n  </technical_specs>` : ''}${f.schema ? `
+  <reference_data>
+    <schema>${f.schema.substring(0, 500)}${f.schema.length > 500 ? '...' : ''}</schema>
+  </reference_data>` : ''}${f.errorLog ? `
+  <debug_context>
+    <error_log>${f.errorLog.substring(0, 600)}${f.errorLog.length > 600 ? '...' : ''}</error_log>
+    <already_tried>${f.alreadyTried || ''}</already_tried>
+    <ask_ai>Phân tích root cause. Không suggest cách đã thử.</ask_ai>
+  </debug_context>` : ''}${f.constraints ? `
+  <constraints>${f.constraints}</constraints>` : ''}
+  <target_ai>${targetStr}</target_ai>
+</prompt>`
+    } else {
+      vi = `<prompt>
+  <context>${f.description || ''}</context>
+  <task>${f.goal || ''}</task>
   <technical_specs>
     <language>${f.language || 'chưa xác định'}</language>
     <input_data>${f.inputData || 'xác định từ context'}</input_data>
@@ -126,14 +186,13 @@ export function generateFallbackXML(
     <already_tried>${f.alreadyTried || 'không có thông tin'}</already_tried>
     <ask_ai>Phân tích root cause từ stack trace. Không suggest cách đã thử. Giải thích WHY lỗi xảy ra trước khi đề xuất fix.</ask_ai>
   </debug_context>` : ''}
-  <constraints>${f.constraints || 'Viết code clean. Có error handling. Có comments.'}</constraints>
-  <thinking>Trước khi viết code: (1) đọc kỹ yêu cầu, (2) lên plan implement, (3) xác định edge cases và error scenarios, (4) viết code, (5) self-review.</thinking>
+  ${f.constraints ? `<constraints>${f.constraints}</constraints>` : ''}
   <target_ai>${targetStr}</target_ai>
 </prompt>`
+    }
   } else if (taskType === 'content') {
     const f = form as ContentForm
     vi = `<prompt>
-  <role>Bạn là senior copywriter chuyên nghiệp với chuyên môn về ${f.contentType}. Viết nội dung hấp dẫn, đúng tone, chuẩn format platform.</role>
   <context>
     ${f.description}
   </context>
@@ -153,7 +212,6 @@ export function generateFallbackXML(
   } else if (taskType === 'analytics') {
     const f = form as AnalyticsForm
     vi = `<prompt>
-  <role>Bạn là chuyên gia phân tích dữ liệu với kỹ năng insight extraction và data storytelling.</role>
   <context>${f.description}</context>
   <task>${f.goal}</task>
   <data_specs>
@@ -168,7 +226,6 @@ export function generateFallbackXML(
   } else {
     const f = form as SynthesisForm
     vi = `<prompt>
-  <role>Bạn là chuyên gia tổng hợp thông tin với khả năng distill complex documents thành clear insights.</role>
   <context>${f.description}</context>
   <task>${f.purpose}</task>
   <synthesis_specs>

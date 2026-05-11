@@ -53,6 +53,8 @@ export interface SynthesisForm {
 
 export type AnyForm = CodingForm | ContentForm | AnalyticsForm | SynthesisForm
 
+export type OutputMode = 'full' | 'compact'
+
 export interface HistoryItem {
   id: string
   taskType: TaskType
