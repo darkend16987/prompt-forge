@@ -69,7 +69,7 @@ export interface ForgeResult {
 
 // ── Constants ─────────────────────────────────────────────
 export const MODELS: Record<Provider, string[]> = {
-  gemini:    ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-1.5-pro'],
+  gemini:    ['gemini-3-flash-preview', 'gemini-3.1-flash-lite', 'gemini-2.5-flash'],
   deepseek:  ['deepseek-chat', 'deepseek-reasoner'],
   openai:    ['gpt-4o', 'gpt-4o-mini', 'o3-mini'],
   anthropic: ['claude-sonnet-4-5', 'claude-opus-4-5', 'claude-haiku-4-5'],

@@ -19,7 +19,7 @@ import { buildMetaPrompt, generateFallbackXML } from '@/lib/promptBuilder'
 export default function ForgePage() {
   // ── Engine ──────────────────────────────────────────────
   const [engine, setEngine] = useState<EngineConfig>({
-    apiKey: '', provider: 'gemini', model: 'gemini-2.5-flash',
+    apiKey: '', provider: 'gemini', model: 'gemini-3-flash-preview',
   })
 
   // ── Task & forms ────────────────────────────────────────
@@ -74,9 +74,19 @@ export default function ForgePage() {
         // Fallback — no API key
         await new Promise(r => setTimeout(r, 700))
         const result = generateFallbackXML(task, form, targets, bilingual)
-        const parts = result.split('---EN---')
-        setPromptVI(parts[0].trim())
-        setPromptEN(parts[1]?.trim() || '')
+        const parts = result.split(/---\s*EN\s*---/i)
+        const pVI = parts[0].trim()
+        const pEN = parts[1]?.trim() || ''
+        setPromptVI(pVI)
+        setPromptEN(pEN)
+
+        saveHistory({
+          taskType: task,
+          title: getFormDesc(),
+          promptVI: pVI,
+          promptEN: pEN,
+        })
+        refreshHistory()
       } else {
         const res = await fetch('/api/forge', {
           method: 'POST',
@@ -94,7 +104,7 @@ export default function ForgePage() {
         setPromptEN(data.promptEN || '')
 
         // Save to history
-        const item = saveHistory({
+        saveHistory({
           taskType: task,
           title: getFormDesc(),
           promptVI: data.promptVI || '',

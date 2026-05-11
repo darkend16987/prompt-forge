@@ -80,7 +80,9 @@ export default function OutputPanel({
         <div style={{ display: 'flex', gap: 6 }}>
           {hasOutput && (
             <>
-              {(['vi', 'en', 'diff'] as const).map(tab => (
+              {(['vi', 'en', 'diff'] as const).map(tab => {
+                if (tab === 'en' && !bilingual && !promptEN) return null
+                return (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -94,7 +96,7 @@ export default function OutputPanel({
                 >
                   {tab === 'vi' ? 'VI' : tab === 'en' ? 'EN' : 'DIFF'}
                 </button>
-              ))}
+              )})}
             </>
           )}
           <button

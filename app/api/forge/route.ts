@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
     // Clean up any accidental markdown fences
     text = text.replace(/^```xml\n?/i, '').replace(/\n?```$/i, '').trim()
 
-    const parts = text.split('---EN---')
+    const parts = text.split(/---\s*EN\s*---/i)
     return NextResponse.json({
       promptVI: parts[0]?.trim() || '',
       promptEN: parts[1]?.trim() || '',
