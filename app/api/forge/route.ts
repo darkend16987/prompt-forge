@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: metaPrompt }] }],
-          generationConfig: { maxOutputTokens: 8192, temperature: 0.3 },
+          generationConfig: { maxOutputTokens: 65536, temperature: 0.3 },
         }),
       })
       const data = await res.json()
