@@ -25,12 +25,16 @@ export async function POST(req: NextRequest) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: metaPrompt }] }],
-          generationConfig: { maxOutputTokens: 2048, temperature: 0.3 },
+          generationConfig: { maxOutputTokens: 8192, temperature: 0.3 },
         }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error?.message || 'Gemini API error')
-      text = data?.candidates?.[0]?.content?.parts?.[0]?.text || ''
+      const candidate = data?.candidates?.[0]
+      if (candidate?.finishReason === 'MAX_TOKENS') {
+        throw new Error('Output bị cắt do vượt quá giới hạn token. Vui lòng thử compact mode hoặc rút gọn mô tả.')
+      }
+      text = candidate?.content?.parts?.[0]?.text || ''
     }
 
     // ── Deepseek ────────────────────────────────────────────────────
@@ -41,12 +45,15 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({
           model,
           messages: [{ role: 'user', content: metaPrompt }],
-          max_tokens: 2048,
+          max_tokens: 8192,
           temperature: 0.3,
         }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error?.message || 'Deepseek API error')
+      if (data?.choices?.[0]?.finish_reason === 'length') {
+        throw new Error('Output bị cắt do vượt quá giới hạn token. Vui lòng thử compact mode hoặc rút gọn mô tả.')
+      }
       text = data?.choices?.[0]?.message?.content || ''
     }
 
@@ -58,12 +65,15 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({
           model,
           messages: [{ role: 'user', content: metaPrompt }],
-          max_tokens: 2048,
+          max_tokens: 16000,
           temperature: 0.3,
         }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error?.message || 'OpenAI API error')
+      if (data?.choices?.[0]?.finish_reason === 'length') {
+        throw new Error('Output bị cắt do vượt quá giới hạn token. Vui lòng thử compact mode hoặc rút gọn mô tả.')
+      }
       text = data?.choices?.[0]?.message?.content || ''
     }
 
@@ -78,12 +88,15 @@ export async function POST(req: NextRequest) {
         },
         body: JSON.stringify({
           model,
-          max_tokens: 2048,
+          max_tokens: 8192,
           messages: [{ role: 'user', content: metaPrompt }],
         }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error?.message || 'Anthropic API error')
+      if (data?.stop_reason === 'max_tokens') {
+        throw new Error('Output bị cắt do vượt quá giới hạn token. Vui lòng thử compact mode hoặc rút gọn mô tả.')
+      }
       text = data?.content?.[0]?.text || ''
     }
 
