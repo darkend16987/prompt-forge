@@ -167,6 +167,7 @@ export function generateFallbackXML(
     <ask_ai>Phân tích root cause. Không suggest cách đã thử.</ask_ai>
   </debug_context>` : ''}${f.constraints ? `
   <constraints>${f.constraints}</constraints>` : ''}
+  <thinking>step-by-step trước khi viết code</thinking>
   <target_ai>${targetStr}</target_ai>
 </prompt>`
     } else {
@@ -187,6 +188,7 @@ export function generateFallbackXML(
     <ask_ai>Phân tích root cause từ stack trace. Không suggest cách đã thử. Giải thích WHY lỗi xảy ra trước khi đề xuất fix.</ask_ai>
   </debug_context>` : ''}
   ${f.constraints ? `<constraints>${f.constraints}</constraints>` : ''}
+  <thinking>step-by-step trước khi viết code</thinking>
   <target_ai>${targetStr}</target_ai>
 </prompt>`
     }
